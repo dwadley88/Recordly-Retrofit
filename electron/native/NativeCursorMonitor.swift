@@ -194,7 +194,7 @@ func currentElement() -> AXUIElement? {
 func focusedElement() -> AXUIElement? {
 	var value: CFTypeRef?
 	let error = AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute as CFString, &value)
-	guard error == .success, let value else {
+	guard error == .success, let value = value else {
 		return nil
 	}
 
@@ -204,7 +204,7 @@ func focusedElement() -> AXUIElement? {
 func parentElement(of element: AXUIElement) -> AXUIElement? {
 	var value: CFTypeRef?
 	let error = AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &value)
-	guard error == .success, let value else {
+	guard error == .success, let value = value else {
 		return nil
 	}
 
@@ -217,7 +217,7 @@ func hasAttribute(_ element: AXUIElement, _ attribute: String) -> Bool {
 }
 
 func ancestorChain(startingAt element: AXUIElement?, maxDepth: Int = 4) -> [AXUIElement] {
-	guard let element else {
+	guard let element = element else {
 		return []
 	}
 
@@ -337,7 +337,7 @@ func currentSystemCursorType() -> String {
 		return NSCursor.current
 	}
 
-	guard let resolvedCursor else {
+	guard let resolvedCursor = resolvedCursor else {
 		return accessibilityCursorMatch() ?? "arrow"
 	}
 
@@ -467,7 +467,7 @@ let mouseEventTap = CGEvent.tapCreate(
 	callback: mouseInteractionCallback,
 	userInfo: nil
 )
-if let mouseEventTap,
+if let mouseEventTap = mouseEventTap,
 	let eventTapSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, mouseEventTap, 0) {
 	CFRunLoopAddSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
 	CGEvent.tapEnable(tap: mouseEventTap, enable: true)
