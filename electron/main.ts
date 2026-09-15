@@ -18,6 +18,7 @@ import {
 import { RECORDINGS_DIR } from "./appPaths";
 import { showCursor } from "./cursorHider";
 import { getGpuSwitches } from "./gpuSwitches";
+import { getMacOSMajorVersionSync } from "./macosVersion";
 import {
 	cleanupAllExportStreams,
 	cleanupNativeVideoExportSessions,
@@ -74,9 +75,20 @@ function ignoreBrokenConsolePipe(stream: NodeJS.WritableStream | undefined) {
 ignoreBrokenConsolePipe(process.stdout);
 ignoreBrokenConsolePipe(process.stderr);
 
-app.commandLine.appendSwitch("ignore-gpu-blocklist");
-app.commandLine.appendSwitch("enable-unsafe-webgpu");
-app.commandLine.appendSwitch("enable-gpu-rasterization");
+// Older Intel Macs (e.g. 2014-era MacBook Pros stuck on Big Sur/Monterey/
+// Ventura) can crash the GPU process when these switches force Chromium past
+// its own GPU blocklist. Below macOS 14 — the same floor as native
+// ScreenCaptureKit capture — skip them and let Chromium apply its usual
+// safety checks.
+const macOSMajorVersion = getMacOSMajorVersionSync();
+const isOlderUnsafeGpuMac =
+	process.platform === "darwin" && macOSMajorVersion !== null && macOSMajorVersion < 14;
+
+if (!isOlderUnsafeGpuMac) {
+	app.commandLine.appendSwitch("ignore-gpu-blocklist");
+	app.commandLine.appendSwitch("enable-unsafe-webgpu");
+	app.commandLine.appendSwitch("enable-gpu-rasterization");
+}
 
 app.on("web-contents-created", (_event, contents) => {
 	if (!shouldHardenWebContentsType(contents.getType())) {
@@ -87,7 +99,11 @@ app.on("web-contents-created", (_event, contents) => {
 });
 
 function configureGpuAccelerationSwitches() {
-	const { useAngle, useGl, disableFeatures } = getGpuSwitches(process.platform, process.env);
+	const { useAngle, useGl, disableFeatures } = getGpuSwitches(
+		process.platform,
+		process.env,
+		macOSMajorVersion,
+	);
 	if (useAngle) {
 		app.commandLine.appendSwitch("use-angle", useAngle);
 	}

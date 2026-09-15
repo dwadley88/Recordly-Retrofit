@@ -43,8 +43,19 @@ export function shouldForceLinuxEgl(env: NodeJS.ProcessEnv): boolean {
 export function getGpuSwitches(
 	platform: NodeJS.Platform,
 	env: NodeJS.ProcessEnv = process.env,
+	macOSMajorVersion?: number | null,
 ): GpuSwitches {
 	if (platform === "darwin") {
+		// Forcing ANGLE's Metal backend can fail to initialize on older Intel
+		// Macs (e.g. 2014-era MacBook Pros stuck on Big Sur/Monterey/Ventura),
+		// crashing the GPU process and breaking the HUD overlay's click-through
+		// mouse forwarding. Below macOS 14 — the same floor as native
+		// ScreenCaptureKit capture — leave the backend unset so Chromium falls
+		// back to its own (safer) default instead.
+		if (typeof macOSMajorVersion === "number" && macOSMajorVersion < 14) {
+			return {};
+		}
+
 		return {
 			useAngle: "metal",
 			disableFeatures: ["MacCatapLoopbackAudioForScreenShare"],

@@ -64,4 +64,22 @@ describe("getGpuSwitches", () => {
 			disableFeatures: ["VaapiVideoDecoder", "VaapiVideoEncoder"],
 		});
 	});
+
+	it("forces the Metal ANGLE backend on macOS 14+", () => {
+		expect(getGpuSwitches("darwin", {}, 14)).toEqual({
+			useAngle: "metal",
+			disableFeatures: ["MacCatapLoopbackAudioForScreenShare"],
+		});
+	});
+
+	it("forces the Metal ANGLE backend on macOS when the version is unknown", () => {
+		expect(getGpuSwitches("darwin", {})).toEqual({
+			useAngle: "metal",
+			disableFeatures: ["MacCatapLoopbackAudioForScreenShare"],
+		});
+	});
+
+	it("leaves the GPU backend unset on macOS older than 14 (e.g. Big Sur)", () => {
+		expect(getGpuSwitches("darwin", {}, 11)).toEqual({});
+	});
 });
