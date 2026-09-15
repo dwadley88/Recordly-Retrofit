@@ -39,10 +39,12 @@ const helpers = [
 	{
 		source: "ScreenCaptureKitRecorder.swift",
 		output: "recordly-screencapturekit-helper",
+		requiresScreenCaptureKit: true,
 	},
 	{
 		source: "ScreenCaptureKitWindowList.swift",
 		output: "recordly-window-list",
+		requiresScreenCaptureKit: true,
 	},
 	{
 		source: "SystemCursorAssets.swift",
@@ -62,11 +64,42 @@ if (swiftcCheck.status !== 0) {
 	throw new Error(details || "swiftc is unavailable; install Xcode Command Line Tools.");
 }
 
+// ScreenCaptureKit doesn't exist in the SDK bundled with the last Xcode that
+// runs on Big Sur/Monterey (13.2.1), and the recorder's shorthand optional
+// binding (`if let x { }`) needs the Swift 5.7 compiler from Xcode 14+ that
+// those older macOS versions can't install either. Probe once so a build on
+// such a machine can skip these two helpers instead of failing outright —
+// they're gated off at runtime anyway (see mac.ts's isNativeMacCaptureAvailable()).
+function hasScreenCaptureKitModule() {
+	const probe = spawnSync("swiftc", ["-typecheck", "-"], {
+		encoding: "utf8",
+		input: "import ScreenCaptureKit\n",
+		timeout: 30000,
+	});
+	return probe.status === 0;
+}
+
+const screenCaptureKitAvailable = hasScreenCaptureKitModule();
+if (!screenCaptureKitAvailable) {
+	console.warn(
+		"[build-native-helpers] ScreenCaptureKit is unavailable on this machine's SDK/toolchain " +
+			"(expected on Big Sur/Monterey/Ventura). Skipping the native capture and window-list " +
+			"helpers; the app already falls back to browser-based capture on macOS below 14.",
+	);
+}
+
 for (const target of getTargetConfigs()) {
 	const outputDir = path.join(nativeRoot, "bin", target.archTag);
 	await mkdir(outputDir, { recursive: true });
 
 	for (const helper of helpers) {
+		if (helper.requiresScreenCaptureKit && !screenCaptureKitAvailable) {
+			console.warn(
+				`[build-native-helpers] Skipping ${helper.output} (${target.archTag}): ScreenCaptureKit unavailable.`,
+			);
+			continue;
+		}
+
 		const sourcePath = path.join(nativeRoot, helper.source);
 		const outputPath = path.join(outputDir, helper.output);
 		const swiftTarget = helper.usesCursorHelperTarget
