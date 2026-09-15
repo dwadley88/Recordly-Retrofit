@@ -12,15 +12,25 @@ if (process.platform !== "darwin") {
 	process.exit(0);
 }
 
+// ScreenCaptureKit is unavailable before macOS 12.3, and the capture helper
+// relies on capture APIs that only stabilized in macOS 14 (see mac.ts's
+// isNativeMacCaptureAvailable() gate), so it keeps that deployment target.
+// Cursor helpers only use AppKit/ApplicationServices, which work all the way
+// back to Big Sur (11.0) and earlier, so they get a much lower floor. Big Sur
+// is the oldest macOS this project still targets (macOS 11.6.8, the last
+// release supported on 2014-era MacBook Pros), so 11.0 is the practical floor
+// rather than the true AppKit minimum.
 function getTargetConfigs() {
 	return [
 		{
 			archTag: "darwin-arm64",
 			swiftTarget: "arm64-apple-macos14.0",
+			cursorHelperSwiftTarget: "arm64-apple-macos11.0",
 		},
 		{
 			archTag: "darwin-x64",
 			swiftTarget: "x86_64-apple-macos14.0",
+			cursorHelperSwiftTarget: "x86_64-apple-macos11.0",
 		},
 	];
 }
@@ -37,10 +47,12 @@ const helpers = [
 	{
 		source: "SystemCursorAssets.swift",
 		output: "recordly-system-cursors",
+		usesCursorHelperTarget: true,
 	},
 	{
 		source: "NativeCursorMonitor.swift",
 		output: "recordly-native-cursor-monitor",
+		usesCursorHelperTarget: true,
 	},
 ];
 
@@ -57,10 +69,13 @@ for (const target of getTargetConfigs()) {
 	for (const helper of helpers) {
 		const sourcePath = path.join(nativeRoot, helper.source);
 		const outputPath = path.join(outputDir, helper.output);
+		const swiftTarget = helper.usesCursorHelperTarget
+			? target.cursorHelperSwiftTarget
+			: target.swiftTarget;
 
 		const result = spawnSync(
 			"swiftc",
-			["-O", "-target", target.swiftTarget, sourcePath, "-o", outputPath],
+			["-O", "-target", swiftTarget, sourcePath, "-o", outputPath],
 			{
 				encoding: "utf8",
 				env: {

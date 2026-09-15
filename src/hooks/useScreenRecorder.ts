@@ -408,6 +408,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	const startInFlight = useRef(false);
 	const hasPromptedForReselect = useRef(false);
 	const hasShownNativeWindowsFallbackToast = useRef(false);
+	const hasShownNativeMacFallbackToast = useRef(false);
 	const countdownDelayLoaded = useRef(false);
 	const recordingPrefsLoaded = useRef(false);
 	const pendingWebcamPathPromise = useRef<Promise<string | null> | null>(null);
@@ -1153,11 +1154,34 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		resetRecordingClock(recordingSessionTimestamp.current);
 		await prepareWebcamRecorder();
 
-		const useNativeMacScreenCapture =
+		let useNativeMacScreenCapture = false;
+		if (
 			platform === "darwin" &&
 			(selectedSource.id?.startsWith("screen:") ||
 				selectedSource.id?.startsWith("window:")) &&
-			typeof window.electronAPI.startNativeScreenRecording === "function";
+			typeof window.electronAPI.startNativeScreenRecording === "function" &&
+			typeof window.electronAPI.isNativeMacCaptureAvailable === "function"
+		) {
+			try {
+				const nativeMacResult = await window.electronAPI.isNativeMacCaptureAvailable();
+				useNativeMacScreenCapture = nativeMacResult.available;
+				if (!useNativeMacScreenCapture && !hasShownNativeMacFallbackToast.current) {
+					void logNativeCaptureDiagnostics("is-native-mac-capture-available");
+					hasShownNativeMacFallbackToast.current = true;
+					toast.info(
+						"Native macOS capture requires macOS 14 or later. Falling back to browser capture.",
+					);
+				}
+			} catch {
+				useNativeMacScreenCapture = false;
+				if (!hasShownNativeMacFallbackToast.current) {
+					hasShownNativeMacFallbackToast.current = true;
+					toast.info(
+						"Unable to check native macOS capture. Falling back to browser capture.",
+					);
+				}
+			}
+		}
 
 		let useNativeWindowsCapture = false;
 		if (

@@ -995,6 +995,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 	isNativeWindowsCaptureAvailable: () =>
 		ipcRenderer.invoke("is-native-windows-capture-available"),
+	isNativeMacCaptureAvailable: () => ipcRenderer.invoke("is-native-mac-capture-available"),
 	muxNativeWindowsRecording: (expectedDurationMs?: number) =>
 		ipcRenderer.invoke("mux-native-windows-recording", expectedDurationMs),
 	hideOsCursor: () => ipcRenderer.invoke("hide-cursor"),
