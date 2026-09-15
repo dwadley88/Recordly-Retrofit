@@ -1,6 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import fs from "node:fs/promises";
 import { BrowserWindow } from "electron";
+import { getMacOSMajorVersionSync, parseMacOSMajorVersion } from "../../macosVersion";
 import {
 	persistPendingCursorTelemetry,
 	snapshotCursorTelemetryForPersistence,
@@ -41,23 +42,15 @@ import { pruneAutoRecordings } from "./prune";
 const MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION = 14;
 
 export function isMacOSVersionSupportedForNativeCapture(productVersion: string): boolean {
-	const major = Number(productVersion.trim().split(".")[0]);
-	return Number.isFinite(major) && major >= MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION;
+	const major = parseMacOSMajorVersion(productVersion);
+	return major !== null && major >= MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION;
 }
 
 export async function isNativeMacCaptureAvailable(): Promise<boolean> {
 	if (process.platform !== "darwin") return false;
 
-	const { execFile } = await import("node:child_process");
-	const { promisify } = await import("node:util");
-	const execFileAsync = promisify(execFile);
-
-	try {
-		const { stdout } = await execFileAsync("sw_vers", ["-productVersion"]);
-		return isMacOSVersionSupportedForNativeCapture(stdout);
-	} catch {
-		return false;
-	}
+	const major = getMacOSMajorVersionSync();
+	return major !== null && major >= MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION;
 }
 
 export function waitForNativeCaptureStart(process: ChildProcessWithoutNullStreams) {
