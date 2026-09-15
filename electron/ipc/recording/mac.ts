@@ -33,6 +33,33 @@ import { emitRecordingInterrupted } from "./events";
 import { getFinalMacCompanionAudioPath } from "./macCompanionAudio";
 import { pruneAutoRecordings } from "./prune";
 
+// The bundled ScreenCaptureKit helper is compiled with a macOS 14.0 deployment
+// target (see scripts/build-native-helpers.mjs), so dyld refuses to launch it
+// below that version. Checking this ahead of time lets older macOS (Big Sur
+// through Ventura) fall back to browser-based capture instead of failing on
+// an unusable native launch.
+const MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION = 14;
+
+export function isMacOSVersionSupportedForNativeCapture(productVersion: string): boolean {
+	const major = Number(productVersion.trim().split(".")[0]);
+	return Number.isFinite(major) && major >= MINIMUM_NATIVE_CAPTURE_MACOS_MAJOR_VERSION;
+}
+
+export async function isNativeMacCaptureAvailable(): Promise<boolean> {
+	if (process.platform !== "darwin") return false;
+
+	const { execFile } = await import("node:child_process");
+	const { promisify } = await import("node:util");
+	const execFileAsync = promisify(execFile);
+
+	try {
+		const { stdout } = await execFileAsync("sw_vers", ["-productVersion"]);
+		return isMacOSVersionSupportedForNativeCapture(stdout);
+	} catch {
+		return false;
+	}
+}
+
 export function waitForNativeCaptureStart(process: ChildProcessWithoutNullStreams) {
 	return new Promise<void>((resolve, reject) => {
 		const timer = setTimeout(() => {

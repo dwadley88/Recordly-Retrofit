@@ -68,6 +68,7 @@ import {
 import {
 	attachNativeCaptureLifecycle,
 	finalizeStoredVideo,
+	isNativeMacCaptureAvailable,
 	muxNativeMacRecordingWithAudio,
 	recoverNativeMacCaptureOutput,
 	waitForNativeCaptureCommand,
@@ -666,6 +667,14 @@ export function registerRecordingHandlers(
 				};
 			}
 
+			if (!(await isNativeMacCaptureAvailable())) {
+				return {
+					success: false,
+					message:
+						"Native screen recording requires macOS 14 or later. Use the browser-based screen capture instead.",
+				};
+			}
+
 			if (nativeCaptureProcess && !nativeScreenRecordingActive) {
 				try {
 					nativeCaptureProcess.kill();
@@ -1145,6 +1154,14 @@ export function registerRecordingHandlers(
 				};
 			}
 
+			if (!(await isNativeMacCaptureAvailable())) {
+				return {
+					success: false,
+					message:
+						"Native screen recording requires macOS 14 or later. Use the browser-based screen capture instead.",
+				};
+			}
+
 			if (!nativeScreenRecordingActive) {
 				const recovered = await recoverNativeMacCaptureOutput();
 				if (recovered) {
@@ -1290,7 +1307,7 @@ export function registerRecordingHandlers(
 	});
 
 	ipcMain.handle("recover-native-screen-recording", async () => {
-		if (process.platform !== "darwin") {
+		if (process.platform !== "darwin" || !(await isNativeMacCaptureAvailable())) {
 			return {
 				success: false,
 				message: "Native screen recording recovery is only available on macOS.",
@@ -1335,6 +1352,14 @@ export function registerRecordingHandlers(
 			return {
 				success: false,
 				message: "Native screen recording is only available on macOS.",
+			};
+		}
+
+		if (!(await isNativeMacCaptureAvailable())) {
+			return {
+				success: false,
+				message:
+					"Native screen recording requires macOS 14 or later. Use the browser-based screen capture instead.",
 			};
 		}
 
@@ -1394,6 +1419,14 @@ export function registerRecordingHandlers(
 			};
 		}
 
+		if (!(await isNativeMacCaptureAvailable())) {
+			return {
+				success: false,
+				message:
+					"Native screen recording requires macOS 14 or later. Use the browser-based screen capture instead.",
+			};
+		}
+
 		if (!nativeScreenRecordingActive || !nativeCaptureProcess) {
 			return { success: false, message: "No native screen recording is active." };
 		}
@@ -1431,6 +1464,10 @@ export function registerRecordingHandlers(
 
 	ipcMain.handle("is-native-windows-capture-available", async () => {
 		return { available: await isNativeWindowsCaptureAvailable() };
+	});
+
+	ipcMain.handle("is-native-mac-capture-available", async () => {
+		return { available: await isNativeMacCaptureAvailable() };
 	});
 
 	ipcMain.handle("get-last-native-capture-diagnostics", async () => {

@@ -28,13 +28,13 @@ Recordly is a desktop app for recording and editing screen captures with motion-
 
 Recordly runs on:
 
-- **macOS** 14.0+
+- **macOS** 11.0+ (14.0+ for native capture; older versions use browser-based capture)
 - **Windows** 10 Build 19041+
 - **Linux** on modern distros
 
 Platform notes:
 
-- **macOS** uses native ScreenCaptureKit-based capture helpers.
+- **macOS** uses native ScreenCaptureKit-based capture helpers on macOS 14.0+; earlier versions (11.0–13.x, including Big Sur) fall back to browser-based capture, same as Linux.
 - **Windows** uses a native Windows Graphics Capture (WGC) helper on supported builds, with native WASAPI audio support.
 - **Linux** records through Electron capture APIs. Cursor hiding is not supported on Linux today.
 
@@ -241,12 +241,12 @@ xattr -rd com.apple.quarantine /Applications/Recordly.app
 
 | Platform | Minimum version | Notes |
 |---|---|---|
-| **macOS** | macOS 14.0 (Sonoma) | Required for ScreenCaptureKit audio and microphone capture. |
+| **macOS** | macOS 11.0 (Big Sur) | macOS 14.0 (Sonoma) or later is required for the native ScreenCaptureKit recorder with audio and microphone capture. Older macOS (11.0–13.x) falls back to browser-based capture, same as Linux. |
 | **Windows** | Windows 10 20H1 (Build 19041, May 2020) | Required for the native Windows Graphics Capture (WGC) helper and best cursor-hiding behavior. |
 | **Linux** | Any modern distro | Recording works through Electron capture. System audio generally requires PipeWire. |
 
 > [!IMPORTANT]
-> On Windows builds older than 19041, recording can still work through fallback capture, but the real OS cursor may remain visible in recordings.
+> On macOS older than 14.0 (including Big Sur, Monterey, and Ventura), recording falls back to browser-based capture: the real cursor may remain visible, and system audio capture is unavailable. On Windows builds older than 19041, recording can still work through fallback capture, but the real OS cursor may remain visible in recordings.
 
 ---
 
@@ -291,7 +291,8 @@ You can adjust format-specific settings such as quality, GIF frame rate, GIF loo
 Recordly renders a polished cursor overlay on top of the recording. Platform cursor-hiding behavior still depends on OS support.
 
 **macOS**
-- ScreenCaptureKit can exclude the real cursor cleanly.
+- On macOS 14.0+, ScreenCaptureKit can exclude the real cursor cleanly.
+- On macOS 11.0–13.x (including Big Sur), recording falls back to browser-based capture, so the real cursor may remain visible.
 
 **Windows**
 - Best results require Windows 10 Build 19041+ and the native capture helper.
@@ -313,6 +314,7 @@ System audio support varies by platform.
 
 **macOS**
 - Requires macOS 14.0+ and the ScreenCaptureKit-based workflow
+- Unavailable on macOS 11.0–13.x, where recording uses browser-based capture (same limitation as Linux)
 
 ---
 
