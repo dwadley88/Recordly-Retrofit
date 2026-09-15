@@ -10,7 +10,11 @@ import {
 	resizeHudOverlayFallbackBounds,
 	shouldExpandHudOverlayFallback,
 } from "./hudOverlayBounds";
-import { getHudOverlayTaskbarOptions } from "./hudOverlayWindowOptions";
+import {
+	getHudOverlayTaskbarOptions,
+	supportsHudOverlayMousePassthrough,
+} from "./hudOverlayWindowOptions";
+import { getMacOSMajorVersionSync } from "./macosVersion";
 import { getPackagedRendererBaseUrl } from "./rendererServer";
 
 const electronWindowsDir = path.dirname(fileURLToPath(import.meta.url));
@@ -115,8 +119,10 @@ function getEditorWindowQuery(): Record<string, string> {
 	return query;
 }
 
+const hudOverlayMacOSMajorVersion = getMacOSMajorVersionSync();
+
 export function isHudOverlayMousePassthroughSupported(): boolean {
-	return process.platform !== "linux";
+	return supportsHudOverlayMousePassthrough(process.platform, hudOverlayMacOSMajorVersion);
 }
 
 function loadHudOverlayCaptureProtectionSetting(): boolean {
